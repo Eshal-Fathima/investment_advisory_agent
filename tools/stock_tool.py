@@ -1,56 +1,43 @@
-#!/usr/bin/env python3
-"""
-Stock Analysis Tool
-Provides tools for stock market analysis and recommendations.
-"""
+from crewai.tools import BaseTool
+from openai import OpenAI
+import os
 
-from crewai_tools import tool
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+class StockRecommendationTool(BaseTool):
+    name = "Stock Recommendation Tool"
+    description = (
+        "Suggests suitable stocks based on the user's "
+        "age, risk tolerance, investment amount, and goals."
+    )
 
-def create_stock_tool():
-    """Create and return the stock analysis tool."""
-    
-    @tool("Analyze Stocks")
-    def analyze_stocks(query: str) -> str:
+    def _run(self, age, risk, amount, goal):
+
+        prompt = f"""
+        You are an investment advisor.
+
+        User Details:
+        Age: {age}
+        Risk Tolerance: {risk}
+        Investment Amount: ₹{amount}
+        Goal: {goal}
+
+        Recommend 5 suitable stocks.
+
+        For each stock provide:
+        - Company Name
+        - Reason for recommendation
+        - Risk Level
+        - Suggested investment percentage
+
+        Mention this is educational advice only.
         """
-        Analyze stocks based on query parameters.
-        
-        Args:
-            query: Stock analysis query (e.g., "top performing tech stocks", "growth stocks under $50")
-            
-        Returns:
-            str: Stock analysis results with recommendations
-        """
-        # TODO: Integrate with actual stock API (Yahoo Finance, Alpha Vantage, etc.)
-        return f"Stock analysis for query: {query}\n[Integration with stock API pending]"
-    
-    return analyze_stocks
 
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role":"user","content":prompt}
+            ]
+        )
 
-# Additional helper functions can be added here
-def get_stock_data(symbol: str) -> dict:
-    """
-    Fetch stock data for a given symbol.
-    
-    Args:
-        symbol: Stock ticker symbol (e.g., "AAPL", "MSFT")
-        
-    Returns:
-        dict: Stock data including price, volume, and technical indicators
-    """
-    # TODO: Implement actual stock data fetching
-    return {"symbol": symbol, "data": "pending"}
-
-
-def calculate_technical_indicators(symbol: str) -> dict:
-    """
-    Calculate technical indicators for a stock.
-    
-    Args:
-        symbol: Stock ticker symbol
-        
-    Returns:
-        dict: Technical indicators (RSI, MACD, Moving Averages, etc.)
-    """
-    # TODO: Implement technical analysis
-    return {"symbol": symbol, "indicators": "pending"}
+        return response.choices[0].message.content

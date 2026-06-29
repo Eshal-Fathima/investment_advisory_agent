@@ -1,56 +1,41 @@
-#!/usr/bin/env python3
-"""
-Mutual Fund Analysis Tool
-Provides tools for mutual fund evaluation and comparison.
-"""
+from crewai.tools import BaseTool
+from openai import OpenAI
+import os
 
-from crewai_tools import tool
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
+class MutualFundTool(BaseTool):
 
-def create_mutualfund_tool():
-    """Create and return the mutual fund analysis tool."""
-    
-    @tool("Analyze Mutual Funds")
-    def analyze_mutual_funds(query: str) -> str:
+    name = "Mutual Fund Tool"
+
+    description = (
+        "Suggests mutual funds based on financial goals."
+    )
+
+    def _run(self, goal, duration, risk):
+
+        prompt = f"""
+        Suggest suitable mutual fund categories.
+
+        Goal:
+        {goal}
+
+        Duration:
+        {duration}
+
+        Risk:
+        {risk}
+
+        Explain why each recommendation is suitable.
+
+        Mention educational purpose only.
         """
-        Analyze and compare mutual funds.
-        
-        Args:
-            query: Mutual fund analysis query (e.g., "top equity funds", "best performing balanced funds")
-            
-        Returns:
-            str: Mutual fund analysis with performance metrics and recommendations
-        """
-        # TODO: Integrate with mutual fund API (Morningstar, AMFI, etc.)
-        return f"Mutual fund analysis for query: {query}\n[Integration with mutual fund API pending]"
-    
-    return analyze_mutual_funds
 
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",
+            messages=[
+                {"role":"user","content":prompt}
+            ]
+        )
 
-# Additional helper functions can be added here
-def get_fund_performance(fund_name: str) -> dict:
-    """
-    Fetch performance metrics for a mutual fund.
-    
-    Args:
-        fund_name: Name of the mutual fund
-        
-    Returns:
-        dict: Performance data including returns, expense ratio, and AUM
-    """
-    # TODO: Implement actual fund performance fetching
-    return {"fund": fund_name, "performance": "pending"}
-
-
-def compare_funds(fund_list: list) -> dict:
-    """
-    Compare multiple mutual funds.
-    
-    Args:
-        fund_list: List of mutual fund names to compare
-        
-    Returns:
-        dict: Comparative analysis of selected funds
-    """
-    # TODO: Implement fund comparison logic
-    return {"funds": fund_list, "comparison": "pending"}
+        return response.choices[0].message.content
