@@ -1,35 +1,34 @@
 from crewai.tools import BaseTool
-from openai import OpenAI
-import os
+from tools.openai_client import client
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class MarketInsightTool(BaseTool):
 
     name = "Market Insight Tool"
 
     description = (
-        "Explains market concepts and general trends."
+        "Explain market trends and concepts."
     )
 
     def _run(self, question):
 
         prompt = f"""
-        Answer this market question:
+        Explain
 
         {question}
 
-        Explain it in simple language.
+        Use beginner-friendly language.
 
-        Use examples.
-
-        Mention that market conditions change over time.
+        Give examples.
         """
 
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
             messages=[
-                {"role":"user","content":prompt}
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ]
         )
 

@@ -1,42 +1,47 @@
 from crewai.tools import BaseTool
-from openai import OpenAI
-import os
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+from tools.openai_client import client
+
 
 class StockRecommendationTool(BaseTool):
+
     name = "Stock Recommendation Tool"
+
     description = (
-        "Suggests suitable stocks based on the user's "
-        "age, risk tolerance, investment amount, and goals."
+        "Suggest stocks based on the user's age, "
+        "risk tolerance, investment amount, "
+        "and investment goal."
     )
 
     def _run(self, age, risk, amount, goal):
 
         prompt = f"""
-        You are an investment advisor.
+        User Details
 
-        User Details:
-        Age: {age}
-        Risk Tolerance: {risk}
-        Investment Amount: ₹{amount}
-        Goal: {goal}
+        Age : {age}
+
+        Risk : {risk}
+
+        Amount : ₹{amount}
+
+        Goal : {goal}
 
         Recommend 5 suitable stocks.
 
-        For each stock provide:
-        - Company Name
-        - Reason for recommendation
-        - Risk Level
-        - Suggested investment percentage
+        Explain why each stock is suitable.
 
-        Mention this is educational advice only.
+        Mention possible risks.
+
+        Educational purposes only.
         """
 
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
             messages=[
-                {"role":"user","content":prompt}
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ]
         )
 

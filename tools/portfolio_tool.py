@@ -1,38 +1,40 @@
 from crewai.tools import BaseTool
-from openai import OpenAI
-import os
+from tools.openai_client import client
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class PortfolioAnalysisTool(BaseTool):
 
     name = "Portfolio Analysis Tool"
 
     description = (
-        "Analyzes an investment portfolio."
+        "Analyze an investment portfolio."
     )
 
     def _run(self, portfolio):
 
         prompt = f"""
-        Analyze this investment portfolio.
+        Analyze this portfolio.
 
         {portfolio}
 
-        Tell me
+        Explain
 
         - Diversification
-        - Strengths
-        - Weaknesses
-        - Suggestions
 
-        Keep the explanation simple.
+        - Strengths
+
+        - Weaknesses
+
+        - Improvements
         """
 
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
             messages=[
-                {"role":"user","content":prompt}
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ]
         )
 

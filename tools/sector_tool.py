@@ -1,37 +1,38 @@
 from crewai.tools import BaseTool
-from openai import OpenAI
-import os
+from tools.openai_client import client
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class SectorAnalysisTool(BaseTool):
 
     name = "Sector Analysis Tool"
 
     description = (
-        "Suggests sectors based on investment goals."
+        "Recommend sectors for investment."
     )
 
     def _run(self, goal, risk):
 
         prompt = f"""
-        Recommend investment sectors.
+        Investment Goal
 
-        Goal:
         {goal}
 
-        Risk:
+        Risk
+
         {risk}
 
-        Explain why each sector matches.
+        Recommend suitable investment sectors.
 
-        Mention possible risks.
+        Explain each recommendation.
         """
 
         response = client.chat.completions.create(
             model="gpt-4.1-mini",
             messages=[
-                {"role":"user","content":prompt}
+                {
+                    "role": "user",
+                    "content": prompt
+                }
             ]
         )
 
