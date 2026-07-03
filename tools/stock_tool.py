@@ -1,48 +1,31 @@
 from crewai.tools import BaseTool
-
-from tools.openai_client import client
+from tools.openai_client import ask_llm
 
 
 class StockRecommendationTool(BaseTool):
 
-    name = "Stock Recommendation Tool"
+    name: str = "Stock Recommendation Tool"
 
-    description = (
-        "Suggest stocks based on the user's age, "
-        "risk tolerance, investment amount, "
-        "and investment goal."
+    description: str = (
+        "Suggest stocks based on the user's investment query."
     )
 
-    def _run(self, age, risk, amount, goal):
+    def _run(self, query: str):
 
         prompt = f"""
-        User Details
+        You are an investment advisor.
 
-        Age : {age}
+        User Query:
 
-        Risk : {risk}
+        {query}
 
-        Amount : ₹{amount}
+        Recommend 5 stocks.
 
-        Goal : {goal}
+        Explain why.
 
-        Recommend 5 suitable stocks.
-
-        Explain why each stock is suitable.
-
-        Mention possible risks.
+        Mention risks.
 
         Educational purposes only.
         """
 
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-
-        return response.choices[0].message.content
+        return ask_llm(prompt)

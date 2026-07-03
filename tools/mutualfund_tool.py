@@ -1,43 +1,36 @@
 from crewai.tools import BaseTool
-from tools.openai_client import client
-
+from tools.openai_client import ask_llm
 
 class MutualFundTool(BaseTool):
 
-    name = "Mutual Fund Tool"
+    name: str = "Mutual Fund Tool"
 
-    description = (
-        "Suggest suitable mutual funds."
+    description: str = (
+        "Suggest suitable mutual funds based on the user's investment goals."
     )
 
-    def _run(self, goal, duration, risk):
+    def _run(self, query: str):
 
         prompt = f"""
-        Goal
+        You are an experienced financial advisor.
 
-        {goal}
+        The user asked:
 
-        Duration
+        {query}
 
-        {duration}
+        Recommend suitable mutual fund categories based on the user's goals.
 
-        Risk
+        For each recommendation provide:
 
-        {risk}
+        - Fund Category
+        - Why it is suitable
+        - Risk Level
+        - Investment Horizon
+        - Expected Benefits
 
-        Recommend suitable mutual fund categories.
+        Keep the explanation simple and beginner-friendly.
 
-        Explain why.
+        Mention that this is for educational purposes only.
         """
 
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-
-        return response.choices[0].message.content
+        return ask_llm(prompt)

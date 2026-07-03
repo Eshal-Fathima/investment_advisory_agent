@@ -1,35 +1,33 @@
 from crewai.tools import BaseTool
-from tools.openai_client import client
-
+from tools.openai_client import ask_llm
 
 class MarketInsightTool(BaseTool):
 
-    name = "Market Insight Tool"
+    name: str = "Market Insight Tool"
 
-    description = (
-        "Explain market trends and concepts."
+    description: str = (
+        "Explain market trends and investment concepts."
     )
 
-    def _run(self, question):
+    def _run(self, query: str):
 
         prompt = f"""
-        Explain
+        You are a financial market expert.
 
-        {question}
+        The user asked:
 
-        Use beginner-friendly language.
+        {query}
 
-        Give examples.
+        Explain the market trend or investment concept in simple language.
+
+        Include:
+
+        - What it means
+        - Why it happens
+        - Its impact on investors
+        - Beginner-friendly examples
+
+        Mention that market conditions can change over time.
         """
 
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-
-        return response.choices[0].message.content
+        return ask_llm(prompt)

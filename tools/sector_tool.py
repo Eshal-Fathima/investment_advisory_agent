@@ -1,39 +1,35 @@
 from crewai.tools import BaseTool
-from tools.openai_client import client
-
+from tools.openai_client import ask_llm
 
 class SectorAnalysisTool(BaseTool):
 
-    name = "Sector Analysis Tool"
+    name: str = "Sector Analysis Tool"
 
-    description = (
-        "Recommend sectors for investment."
+    description: str = (
+        "Recommend suitable investment sectors based on the user's query."
     )
 
-    def _run(self, goal, risk):
+    def _run(self, query: str):
 
         prompt = f"""
-        Investment Goal
+        You are an investment advisor.
 
-        {goal}
+        The user asked:
 
-        Risk
-
-        {risk}
+        {query}
 
         Recommend suitable investment sectors.
 
-        Explain each recommendation.
+        For each sector provide:
+
+        - Sector Name
+        - Why it is recommended
+        - Risk Level
+        - Long-term outlook
+
+        Keep the explanation simple.
+
+        Mention that this is for educational purposes only.
         """
 
-        response = client.chat.completions.create(
-            model="gpt-4.1-mini",
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ]
-        )
-
-        return response.choices[0].message.content
+        return ask_llm(prompt)
