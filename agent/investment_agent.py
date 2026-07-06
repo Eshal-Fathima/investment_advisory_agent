@@ -64,5 +64,5 @@ investment_agent = Agent(
         SectorAnalysisTool(),
     ],
 
-    verbose=True,
+    verbose=False,
 )
