@@ -61,16 +61,6 @@ def save_conversation(question: str, answer: str, user_id: str = None) -> str:
 
 
 def get_recent_conversations(limit: int = 20, user_id: str = None) -> list:
-    """
-    Fetch the most recent conversations, newest first.
-
-    Args:
-        limit: Max number of conversations to return.
-        user_id: If provided, only return conversations for this user.
-
-    Returns:
-        A list of conversation documents (dicts). Empty list on failure.
-    """
     collection = connect_db()
 
     query = {"user_id": user_id} if user_id else {}
