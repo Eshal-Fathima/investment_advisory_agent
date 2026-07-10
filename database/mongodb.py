@@ -12,11 +12,6 @@ _collection = None
 
 
 def connect_db():
-    """
-    Connect to MongoDB Atlas and return the conversations collection.
-    Reuses a single client/connection across calls instead of opening
-    a new one every time.
-    """
     global _client, _collection
 
     if _collection is not None:
@@ -32,17 +27,6 @@ def connect_db():
 
 
 def save_conversation(question: str, answer: str, user_id: str = None) -> str:
-    """
-    Save a single question/answer exchange to MongoDB.
-
-    Args:
-        question: The user's question.
-        answer: The investment agent's response.
-        user_id: Optional identifier if you later add user accounts/sessions.
-
-    Returns:
-        The inserted document's id as a string, or None if the save failed.
-    """
     collection = connect_db()
 
     document = {
@@ -78,12 +62,6 @@ def get_recent_conversations(limit: int = 20, user_id: str = None) -> list:
 
 
 def delete_conversation(conversation_id: str) -> bool:
-    """
-    Delete a single conversation by its id.
-
-    Returns:
-        True if a document was deleted, False otherwise.
-    """
     from bson import ObjectId
 
     collection = connect_db()
