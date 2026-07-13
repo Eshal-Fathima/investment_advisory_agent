@@ -14,14 +14,7 @@ function Nav() {
         <a href="#pipeline">How it runs</a>
         <a href="#disclaimer">Disclosure</a>
       </div>
-      
-        className="btn"
-        href="https://github.com/Eshal-Fathima/investment_advisory_agent"
-        target="_blank"
-        rel="noreferrer"
-      >
-        View repository
-      </a>
+      <a className="btn" href="https://github.com/Eshal-Fathima/investment_advisory_agent" target="_blank" rel="noreferrer">View repository</a>
     </nav>
   )
 }
@@ -70,17 +63,8 @@ function Hero() {
             tickers.
           </p>
           <div className="cta-row">
-            <a className="btn-solid" href="#capabilities">
-              See what it covers
-            </a>
-            
-              className="btn"
-              href="https://github.com/Eshal-Fathima/investment_advisory_agent"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Read the source
-            </a>
+            <a className="btn-solid" href="#capabilities">See what it covers</a>
+            <a className="btn" href="https://github.com/Eshal-Fathima/investment_advisory_agent" target="_blank" rel="noreferrer">Read the source</a>
           </div>
         </div>
         <LedgerPanel />
@@ -187,24 +171,9 @@ function Footer() {
   return (
     <footer style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '6px' }} id="disclaimer">
       <div className="wrap" style={{ width: '100%' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <span className="fine">Ledger Advisor — a CrewAI project by Eshal Fathima</span>
-          
-            className="btn"
-            href="https://github.com/Eshal-Fathima/investment_advisory_agent"
-            target="_blank"
-            rel="noreferrer"
-          >
-            github.com/Eshal-Fathima
-          </a>
+          <a className="btn" href="https://github.com/Eshal-Fathima/investment_advisory_agent" target="_blank" rel="noreferrer">github.com/Eshal-Fathima</a>
         </div>
         <p className="disclaimer">
           For research and education only. Nothing here is financial advice, and no output from
