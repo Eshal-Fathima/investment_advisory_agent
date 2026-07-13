@@ -1,3 +1,5 @@
+import { useState, useRef, useEffect } from 'react'
+
 function Seal() {
   return <div className="seal">LA</div>
 }
@@ -9,158 +11,104 @@ function Nav() {
         <Seal />
         <span>Ledger Advisor</span>
       </div>
-      <div className="nav-links">
-        <a href="#capabilities">Capabilities</a>
-        <a href="#pipeline">How it runs</a>
-        <a href="#disclaimer">Disclosure</a>
-      </div>
       <a className="btn" href="https://github.com/Eshal-Fathima/investment_advisory_agent" target="_blank" rel="noreferrer">View repository</a>
     </nav>
   )
 }
 
-function LedgerPanel() {
-  const rows = [
-    { name: 'Recommendation', tag: 'Stocks & mutual funds', delta: '+2.4%', dir: 'up' },
-    { name: 'Portfolio review', tag: 'Allocation & risk read', delta: 'flag', dir: 'down' },
-    { name: 'Sector insight', tag: 'IT · Pharma · Energy', delta: '+0.8%', dir: 'up' },
-    { name: 'Market read', tag: 'Index & macro context', delta: '-0.3%', dir: 'down' },
-  ]
+function IntroStrip() {
   return (
-    <div className="ledger">
-      <div className="ledger-head">
-        <span>Agent output</span>
-        <span>Live session</span>
-      </div>
-      {rows.map((r, i) => (
-        <div className="ledger-row" key={i}>
-          <div>
-            <span className="name">{r.name}</span>
-            <span className="tag">{r.tag}</span>
-          </div>
-          <span className={'delta ' + r.dir}>{r.delta}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function Hero() {
-  return (
-    <section style={{ borderBottom: '1px solid var(--line)', paddingTop: 0, paddingBottom: 0 }}>
-      <div className="wrap hero">
-        <div>
-          <span className="eyebrow">CrewAI-powered advisory desk</span>
-          <h1 className="headline">
-            Your portfolio,
-            <br />
-            <em>read like a ledger.</em>
-          </h1>
-          <p className="sub">
-            Ledger Advisor runs a small crew of specialized agents that research stocks and
-            mutual funds, audit your holdings, and translate market noise into a plain,
-            line-by-line brief — the way a careful analyst would, not a chatbot guessing at
-            tickers.
-          </p>
-          <div className="cta-row">
-            <a className="btn-solid" href="#capabilities">See what it covers</a>
-            <a className="btn" href="https://github.com/Eshal-Fathima/investment_advisory_agent" target="_blank" rel="noreferrer">Read the source</a>
-          </div>
-        </div>
-        <LedgerPanel />
+    <section className="intro-strip">
+      <div className="wrap">
+        <span className="eyebrow">CrewAI-powered advisory desk</span>
+        <h1 className="intro-headline">Ask a question. Get a reasoned answer <em>— read like a ledger.</em></h1>
+        <p className="intro-sub">Stock and fund picks, portfolio reviews, market and sector context — a small crew of agents works the question before it reaches you.</p>
       </div>
     </section>
   )
 }
 
-function Capabilities() {
-  const caps = [
-    {
-      idx: '01',
-      title: 'Stock & fund picks',
-      body: 'Ask a plain question about a stock or mutual fund and get a reasoned recommendation, not just a ticker and a price.',
-    },
-    {
-      idx: '02',
-      title: 'Portfolio review',
-      body: 'Hand over your current holdings and the crew reads them back to you — concentration risk, gaps, and what to reconsider.',
-    },
-    {
-      idx: '03',
-      title: 'Market & sector insight',
-      body: 'Zoom out to sector and index-level context, so a single recommendation is never read in isolation.',
-    },
-  ]
-  return (
-    <section id="capabilities">
-      <div className="wrap">
-        <div className="section-head">
-          <div>
-            <span className="section-num">§ 01 — Scope</span>
-            <h2 className="section-title">Three things it's built to do</h2>
-          </div>
-          <p className="section-note">
-            No portfolio execution, no order placement — this is a research and review desk, not
-            a broker.
-          </p>
-        </div>
-        <div className="capabilities">
-          {caps.map((c) => (
-            <div className="cap" key={c.idx}>
-              <span className="idx">{c.idx}</span>
-              <h3>{c.title}</h3>
-              <p>{c.body}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
+function ChatPanel() {
+  const [messages, setMessages] = useState([
+    { role: 'agent', text: "I'm your investment advisor agent. Ask me about a stock, a fund, or hand me your portfolio to review." },
+  ])
+  const [input, setInput] = useState('')
+  const [isThinking, setIsThinking] = useState(false)
+  const bottomRef = useRef(null)
 
-function Pipeline() {
-  const stages = [
-    {
-      tag: 'Intake',
-      title: 'You ask',
-      body: 'A question comes in through the terminal — about a fund, a sector, or your own holdings.',
-    },
-    {
-      tag: 'Crew',
-      title: 'Agents research',
-      body: 'CrewAI agents split the work: market data, fundamentals, and portfolio context.',
-    },
-    {
-      tag: 'Synthesis',
-      title: 'Crew agrees',
-      body: 'Findings are reconciled into a single point of view, not three conflicting opinions.',
-    },
-    {
-      tag: 'Output',
-      title: 'You get a brief',
-      body: 'A plain-language answer, printed back — reasoning included, not just a verdict.',
-    },
-  ]
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isThinking])
+
+  async function handleSend() {
+    const question = input.trim()
+    if (!question) return
+
+    setMessages((prev) => [...prev, { role: 'user', text: question }])
+    setInput('')
+    setIsThinking(true)
+
+    try {
+      const response = await fetch('http://localhost:5000/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question }),
+      })
+
+      if (!response.ok) throw new Error('Request failed')
+
+      const data = await response.json()
+      setMessages((prev) => [...prev, { role: 'agent', text: data.answer }])
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'agent', text: "Couldn't reach the backend. Is server.py running on port 5000?" },
+      ])
+    } finally {
+      setIsThinking(false)
+    }
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      handleSend()
+    }
+  }
+
   return (
-    <section id="pipeline">
+    <section id="chat">
       <div className="wrap">
-        <div className="section-head">
-          <div>
-            <span className="section-num">§ 02 — Mechanics</span>
-            <h2 className="section-title">How a question moves through the crew</h2>
+        <div className="chat-shell">
+          <div className="chat-header">
+            <span>Advisory session</span>
+            <span className="chat-header-dot">● live-ish</span>
           </div>
-          <p className="section-note">
-            Built on CrewAI, so each agent has one job and hands off cleanly to the next.
-          </p>
-        </div>
-        <div className="pipeline">
-          {stages.map((s, i) => (
-            <div className="stage" key={i}>
-              <span className="tag">{s.tag}</span>
-              <h4>{s.title}</h4>
-              <p>{s.body}</p>
-            </div>
-          ))}
+          <div className="messages">
+            {messages.map((m, i) => (
+              <div className={'msg ' + m.role} key={i}>
+                <span className="msg-label">{m.role === 'user' ? 'You' : 'Agent'}</span>
+                <p>{m.text}</p>
+              </div>
+            ))}
+            {isThinking && (
+              <div className="msg agent">
+                <span className="msg-label">Agent</span>
+                <p className="thinking">thinking…</p>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+          <div className="chat-input-row">
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Ask about a stock, a fund, or your portfolio…"
+              rows={1}
+            />
+            <button className="btn-solid" onClick={handleSend}>Send</button>
+          </div>
         </div>
       </div>
     </section>
@@ -187,12 +135,9 @@ function Footer() {
 export default function App() {
   return (
     <>
-      <div className="wrap">
-        <Nav />
-      </div>
-      <Hero />
-      <Capabilities />
-      <Pipeline />
+      <div className="wrap"><Nav /></div>
+      <IntroStrip />
+      <ChatPanel />
       <Footer />
     </>
   )
