@@ -28,6 +28,96 @@ function IntroStrip() {
   )
 }
 
+// ---- formatting helpers for the agent's raw text ----
+
+function sectionEmoji(header) {
+  const h = header.toLowerCase()
+  if (h.includes('sector')) return '🏭'
+  if (h.includes('portfolio')) return '💼'
+  if (h.includes('market') || h.includes('trend') || h.includes('economic')) return '📈'
+  if (h.includes('risk')) return '⚠️'
+  if (h.includes('invest') || h.includes('fund')) return '💰'
+  return '📌'
+}
+
+function parseItems(itemsText) {
+  const itemRegex = /\d+\.\s*\*\*(.+?)\*\*:?\s*([\s\S]*?)(?=\d+\.\s*\*\*|$)/g
+  const items = []
+  for (const m of itemsText.matchAll(itemRegex)) {
+    items.push({ title: m[1].trim(), body: m[2].trim() })
+  }
+  return items
+}
+
+function SimpleFormatted({ text, disclaimer }) {
+  const parts = text.split(/(\*\*.+?\*\*)/g)
+  return (
+    <div className="agent-formatted">
+      <p style={{ whiteSpace: 'pre-wrap' }}>
+        {parts.map((p, i) =>
+          p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : p
+        )}
+      </p>
+      {disclaimer && (
+        <p className="agent-disclaimer">⚠️ <strong>Disclaimer:</strong> {disclaimer}</p>
+      )}
+    </div>
+  )
+}
+
+function formatAgentText(text) {
+  if (!text) return null
+
+  const disclaimerSplit = text.split(/\*\*Disclaimer\*\*:?/i)
+  const mainText = disclaimerSplit[0].trim()
+  const disclaimerText = disclaimerSplit[1] ? disclaimerSplit[1].trim() : null
+
+  const headerRegex = /([A-Z][^:]{3,90}:)\s*(?=\d+\.\s*\*\*)/g
+  const headerMatches = [...mainText.matchAll(headerRegex)]
+
+  if (headerMatches.length === 0) {
+    return <SimpleFormatted text={mainText} disclaimer={disclaimerText} />
+  }
+
+  const sections = []
+  for (let i = 0; i < headerMatches.length; i++) {
+    const start = headerMatches[i].index
+    const end = i + 1 < headerMatches.length ? headerMatches[i + 1].index : mainText.length
+    const chunk = mainText.slice(start, end)
+    const headerText = headerMatches[i][1]
+    const itemsText = chunk.slice(headerText.length)
+    sections.push({ header: headerText.replace(/:$/, ''), items: parseItems(itemsText) })
+  }
+
+  const preamble = mainText.slice(0, headerMatches[0].index).trim()
+
+  return (
+    <div className="agent-formatted">
+      {preamble && <p className="agent-preamble">{preamble}</p>}
+      {sections.map((s, i) => (
+        <div className="agent-section" key={i}>
+          <div className="agent-section-title">
+            <span className="agent-emoji">{sectionEmoji(s.header)}</span>
+            <span>{s.header}</span>
+          </div>
+          <ul>
+            {s.items.map((it, j) => (
+              <li key={j}>
+                <strong>{it.title}</strong>{it.body ? `: ${it.body}` : ''}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {disclaimerText && (
+        <p className="agent-disclaimer">⚠️ <strong>Disclaimer:</strong> {disclaimerText}</p>
+      )}
+    </div>
+  )
+}
+
+// ---- chat panel ----
+
 function ChatPanel() {
   const [messages, setMessages] = useState([
     { role: 'agent', text: "I'm your investment advisor agent. Ask me about a stock, a fund, or hand me your portfolio to review." },
@@ -88,7 +178,7 @@ function ChatPanel() {
             {messages.map((m, i) => (
               <div className={'msg ' + m.role} key={i}>
                 <span className="msg-label">{m.role === 'user' ? 'You' : 'Agent'}</span>
-                <p>{m.text}</p>
+                {m.role === 'agent' ? formatAgentText(m.text) : <p>{m.text}</p>}
               </div>
             ))}
             {isThinking && (
