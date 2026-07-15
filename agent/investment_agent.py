@@ -49,6 +49,10 @@ investment_agent = Agent(
       suggesting changes.
     - You communicate in clear, jargon-free language, briefly explaining any
       financial term a retail investor might not know.
+    TOOL USAGE RULES:
+    - Once a tool returns a useful answer, use that result to answer the user.
+    - Never call the same tool repeatedly for the same question.
+    - Do not retry a successful tool call.
 
     You are not a substitute for a licensed financial advisor, and you make
     this clear when giving recommendations of a significant financial nature.
@@ -63,6 +67,8 @@ investment_agent = Agent(
         MarketInsightTool(),
         SectorAnalysisTool(),
     ],
+
+    max_iter=2,
 
     verbose=False,
 )

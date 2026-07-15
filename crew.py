@@ -17,7 +17,17 @@ investment_task = Task(
 
     {question}
 
-    Use the appropriate tool if needed.
+    Select the SINGLE most relevant tool for the user's question.
+
+    Do not call multiple tools unless the user explicitly requests
+    a combined analysis across multiple investment categories.
+
+    If the question is a general beginner investment question and
+    does not specify stocks, sectors, market conditions, or an
+    existing portfolio, prefer the mutual fund tool.
+
+    Never use the portfolio analysis tool unless the user provides
+    portfolio holdings or explicitly asks for portfolio analysis.
     """,
 
     expected_output="""
