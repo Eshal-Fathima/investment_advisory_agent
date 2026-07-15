@@ -1,5 +1,4 @@
 from crewai.tools import BaseTool
-from tools.openai_client import ask_llm
 
 class MutualFundTool(BaseTool):
 
