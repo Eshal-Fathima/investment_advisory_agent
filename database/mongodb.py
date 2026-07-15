@@ -72,3 +72,27 @@ def delete_conversation(conversation_id: str) -> bool:
     except PyMongoError as e:
         print(f"[mongodb] Failed to delete conversation: {e}")
         return False
+
+
+def get_conversation_history_text(user_id: str, limit: int = 10) -> str:
+    """
+    Fetch the last `limit` exchanges for a given user and format them as
+    plain text, oldest first, so they can be dropped straight into the
+    agent's prompt as short-term memory.
+    """
+    if not user_id:
+        return "No previous conversation history."
+
+    conversations = get_recent_conversations(limit=limit, user_id=user_id)
+
+    if not conversations:
+        return "No previous conversation history."
+
+    # get_recent_conversations returns newest-first; flip to chronological order
+    conversations.reverse()
+
+    lines = []
+    for conv in conversations:
+        lines.append(f"User: {conv['question']}\nAdvisor: {conv['answer']}")
+
+    return "\n\n".join(lines)

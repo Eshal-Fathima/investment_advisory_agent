@@ -116,6 +116,18 @@ function formatAgentText(text) {
   )
 }
 
+// ---- per-browser user id, so each visitor gets their own remembered history ----
+
+function getUserId() {
+  const key = 'investment_agent_user_id'
+  let id = localStorage.getItem(key)
+  if (!id) {
+    id = 'user_' + Math.random().toString(36).slice(2, 10)
+    localStorage.setItem(key, id)
+  }
+  return id
+}
+
 // ---- chat panel ----
 
 function ChatPanel() {
@@ -125,10 +137,35 @@ function ChatPanel() {
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const bottomRef = useRef(null)
+  const userIdRef = useRef(getUserId())
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isThinking])
+
+  // Load this user's last conversations (up to 10) when the page opens
+  useEffect(() => {
+    async function loadHistory() {
+      try {
+        const response = await fetch(`http://localhost:5000/history/${userIdRef.current}`)
+        if (!response.ok) return
+
+        const data = await response.json()
+        const past = (data.conversations || []).flatMap((c) => [
+          { role: 'user', text: c.question },
+          { role: 'agent', text: c.answer },
+        ])
+
+        if (past.length > 0) {
+          setMessages((prev) => [...prev, ...past])
+        }
+      } catch (err) {
+        // silently ignore — history is a nice-to-have, not required to chat
+      }
+    }
+
+    loadHistory()
+  }, [])
 
   async function handleSend() {
     const question = input.trim()
@@ -142,7 +179,7 @@ function ChatPanel() {
       const response = await fetch('http://localhost:5000/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, user_id: userIdRef.current }),
       })
 
       if (!response.ok) throw new Error('Request failed')
