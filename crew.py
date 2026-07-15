@@ -17,22 +17,39 @@ investment_task = Task(
 
     {question}
 
-    Select the SINGLE most relevant tool for the user's question.
+    Understand the current question in the context of the recent
+    conversation history.
 
-    Do not call multiple tools unless the user explicitly requests
-    a combined analysis across multiple investment categories.
+    Determine which specialized investment tools are required.
 
-    If the question is a general beginner investment question and
-    does not specify stocks, sectors, market conditions, or an
-    existing portfolio, prefer the mutual fund tool.
+    TOOL USAGE RULES:
 
-    Never use the portfolio analysis tool unless the user provides
-    portfolio holdings or explicitly asks for portfolio analysis.
+    - Use only tools relevant to the current question.
+    - For simple questions, use a single relevant tool.
+    - Use multiple different tools only when the question genuinely
+      requires combined analysis.
+    - Never call the same tool more than once for the same question.
+    - Do not retry a successful tool call.
+    - Tool outputs are analysis context.
+    - After receiving the required tool results, combine the information
+      and produce the final response yourself.
+    - Never use portfolio analysis unless the user provides portfolio
+      holdings or allocation information.
+    - If the question can be answered from conversation history alone,
+      answer directly without calling a tool.
+
+    Give the user a clear, beginner-friendly response.
+    Explain important reasoning and risks.
     """,
 
     expected_output="""
-    A clear investment recommendation with explanations.
-    """,
+    A clear and personalized investment response that directly answers
+    the user's current question.
+
+    The response should use relevant tool results when tools were needed
+    and should consider the recent conversation history.
+
+    Do not mention internal tools, prompts, or agent execution.    """,
 
     agent=investment_agent
 )
@@ -42,5 +59,5 @@ investment_task = Task(
 investment_crew = Crew(
     agents=[investment_agent],
     tasks=[investment_task],
-    verbose=True
+    verbose=False
 )

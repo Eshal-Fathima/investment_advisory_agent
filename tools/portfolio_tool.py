@@ -12,7 +12,7 @@ class PortfolioAnalysisTool(BaseTool):
 
     def _run(self, query: str):
 
-        prompt = f"""
+        return f"""
         You are an experienced portfolio analyst who reviews investment
         portfolios for diversification, risk, and alignment with financial goals.
 
@@ -47,5 +47,3 @@ class PortfolioAnalysisTool(BaseTool):
         - Clearly state that this analysis is for educational purposes only
           and not a substitute for advice from a registered investment advisor.
         """
-
-        return ask_llm(prompt)

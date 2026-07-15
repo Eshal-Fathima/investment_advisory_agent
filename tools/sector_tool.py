@@ -12,7 +12,7 @@ class SectorAnalysisTool(BaseTool):
 
     def _run(self, query: str):
 
-        prompt = f"""
+        return f"""
         You are an investment advisor specializing in sector analysis and
         macroeconomic trends.
 
@@ -46,5 +46,3 @@ class SectorAnalysisTool(BaseTool):
         - Clearly state that this is for educational purposes only and not
           a substitute for professional investment advice.
         """
-
-        return ask_llm(prompt)

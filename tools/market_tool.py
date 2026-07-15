@@ -12,7 +12,7 @@ class MarketInsightTool(BaseTool):
 
     def _run(self, query: str):
 
-        prompt = f"""
+        return f"""
         You are a financial market analyst who specializes in explaining
         complex market movements and investment concepts in plain, accessible
         language for retail investors.
@@ -40,5 +40,3 @@ class MarketInsightTool(BaseTool):
         - End with a note that market conditions are dynamic and this
           explanation reflects general trends, not personalized advice.
         """
-
-        return ask_llm(prompt)

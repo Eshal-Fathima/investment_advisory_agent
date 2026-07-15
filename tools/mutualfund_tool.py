@@ -13,7 +13,7 @@ class MutualFundTool(BaseTool):
 
     def _run(self, query: str):
 
-        prompt = f"""
+        return f"""
         You are an experienced financial advisor specializing in mutual fund
         selection and asset allocation.
 
@@ -49,5 +49,3 @@ class MutualFundTool(BaseTool):
         - Clearly state that this is for educational purposes only and not
           a substitute for advice from a SEBI-registered investment advisor.
         """
-
-        return ask_llm(prompt)
