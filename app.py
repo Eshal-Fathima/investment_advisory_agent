@@ -1,7 +1,7 @@
 import os
 
 from crew import investment_crew
-from database.mongodb import get_conversation_history_text, save_conversation
+from mongodb import get_conversation_history_text, save_conversation
 
 HISTORY_LIMIT = 10
 USER_ID_FILE = ".current_user_id"

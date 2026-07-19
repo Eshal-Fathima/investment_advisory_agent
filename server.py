@@ -5,7 +5,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 
 from crew import investment_crew
-from database.mongodb import (
+from mongodb import (
     get_conversation_history_text,
     get_recent_conversations,
     save_conversation,

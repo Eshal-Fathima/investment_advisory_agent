@@ -1,6 +1,6 @@
 from crewai import Crew, Task
 
-from agent.investment_agent import investment_agent
+from investment_agent import investment_agent
 
 # Create the task
 investment_task = Task(
