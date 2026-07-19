@@ -3,11 +3,13 @@ import os
 from dotenv import load_dotenv
 from crewai import Agent, LLM
 
-from tools.stock_tool import StockRecommendationTool
-from tools.mutualfund_tool import MutualFundTool
-from tools.portfolio_tool import PortfolioAnalysisTool
-from tools.market_tool import MarketInsightTool
-from tools.sector_tool import SectorAnalysisTool
+from tools import (
+    stock_recommendation,
+    mutual_fund_recommendation,
+    portfolio_analysis,
+    market_insight,
+    sector_analysis,
+)
 
 load_dotenv()
 
@@ -61,11 +63,11 @@ investment_agent = Agent(
     llm=llm,
 
     tools=[
-        StockRecommendationTool(),
-        MutualFundTool(),
-        PortfolioAnalysisTool(),
-        MarketInsightTool(),
-        SectorAnalysisTool(),
+        stock_recommendation,
+        mutual_fund_recommendation,
+        portfolio_analysis,
+        market_insight,
+        sector_analysis,
     ],
 
     max_iter=6,
