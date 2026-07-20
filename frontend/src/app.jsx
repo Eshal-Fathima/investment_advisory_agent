@@ -49,15 +49,43 @@ function parseItems(itemsText) {
   return items
 }
 
-function SimpleFormatted({ text, disclaimer }) {
+function renderInlineBold(text, keyPrefix) {
   const parts = text.split(/(\*\*.+?\*\*)/g)
+  return parts.map((p, i) =>
+    p.startsWith('**') && p.endsWith('**') ? <strong key={`${keyPrefix}-${i}`}>{p.slice(2, -2)}</strong> : p
+  )
+}
+
+function SimpleFormatted({ text, disclaimer }) {
+  const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
+  const bulletLines = lines.filter((l) => /^[•\-*]\s+/.test(l))
+  const preambleLines = lines.filter((l) => !/^[•\-*]\s+/.test(l))
+
+  // If the model gave us real bullet lines, render them as an actual list
+  // instead of a flat paragraph — this is the common case now that the
+  // task prompt asks for "•" bullets even on context-only follow-ups.
+  if (bulletLines.length > 0) {
+    return (
+      <div className="agent-formatted">
+        {preambleLines.length > 0 && (
+          <p className="agent-preamble">{renderInlineBold(preambleLines.join(' '), 'pre')}</p>
+        )}
+        <ul>
+          {bulletLines.map((line, i) => (
+            <li key={i}>{renderInlineBold(line.replace(/^[•\-*]\s+/, ''), i)}</li>
+          ))}
+        </ul>
+        {disclaimer && (
+          <p className="agent-disclaimer">⚠️ <strong>Disclaimer:</strong> {disclaimer}</p>
+        )}
+      </div>
+    )
+  }
+
+  // Last-resort fallback: no bullets detected at all, just show the text
   return (
     <div className="agent-formatted">
-      <p style={{ whiteSpace: 'pre-wrap' }}>
-        {parts.map((p, i) =>
-          p.startsWith('**') && p.endsWith('**') ? <strong key={i}>{p.slice(2, -2)}</strong> : p
-        )}
-      </p>
+      <p style={{ whiteSpace: 'pre-wrap' }}>{renderInlineBold(text, 'flat')}</p>
       {disclaimer && (
         <p className="agent-disclaimer">⚠️ <strong>Disclaimer:</strong> {disclaimer}</p>
       )}
@@ -136,7 +164,10 @@ function ChatPanel() {
   ])
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
+  const [history, setHistory] = useState([])
+  const [activeLogIndex, setActiveLogIndex] = useState(null)
   const bottomRef = useRef(null)
+  const messageRefs = useRef({})
   const userIdRef = useRef(getUserId())
 
   useEffect(() => {
@@ -151,14 +182,23 @@ function ChatPanel() {
         if (!response.ok) return
 
         const data = await response.json()
-        const past = (data.conversations || []).flatMap((c) => [
+        const conversations = data.conversations || []
+        if (conversations.length === 0) return
+
+        // messages[0] is the greeting, so past pairs start at index 1
+        const log = conversations.map((c, i) => ({
+          question: c.question,
+          created_at: c.created_at,
+          questionIndex: 1 + i * 2,
+        }))
+
+        const past = conversations.flatMap((c) => [
           { role: 'user', text: c.question },
           { role: 'agent', text: c.answer },
         ])
 
-        if (past.length > 0) {
-          setMessages((prev) => [...prev, ...past])
-        }
+        setMessages((prev) => [...prev, ...past])
+        setHistory(log)
       } catch (err) {
         // silently ignore — history is a nice-to-have, not required to chat
       }
@@ -166,6 +206,18 @@ function ChatPanel() {
 
     loadHistory()
   }, [])
+
+  function jumpToLog(i) {
+    setActiveLogIndex(i)
+    const targetIndex = history[i].questionIndex
+    messageRefs.current[targetIndex]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function formatLogDate(iso) {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  }
 
   async function handleSend() {
     const question = input.trim()
@@ -207,34 +259,57 @@ function ChatPanel() {
     <section id="chat">
       <div className="wrap">
         <div className="chat-shell">
-          <div className="chat-header">
-            <span>Advisory session</span>
-            <span className="chat-header-dot">● live-ish</span>
-          </div>
-          <div className="messages">
-            {messages.map((m, i) => (
-              <div className={'msg ' + m.role} key={i}>
-                <span className="msg-label">{m.role === 'user' ? 'You' : 'Agent'}</span>
-                {m.role === 'agent' ? formatAgentText(m.text) : <p>{m.text}</p>}
+          {history.length > 0 && (
+            <aside className="chat-sidebar">
+              <div className="chat-sidebar-header">Session log</div>
+              <div className="chat-sidebar-list">
+                {history.map((h, i) => (
+                  <button
+                    key={i}
+                    className={'chat-sidebar-item' + (activeLogIndex === i ? ' active' : '')}
+                    onClick={() => jumpToLog(i)}
+                  >
+                    <span className="chat-sidebar-item-date">{formatLogDate(h.created_at)}</span>
+                    <span className="chat-sidebar-item-text">{h.question}</span>
+                  </button>
+                ))}
               </div>
-            ))}
-            {isThinking && (
-              <div className="msg agent">
-                <span className="msg-label">Agent</span>
-                <p className="thinking">thinking…</p>
-              </div>
-            )}
-            <div ref={bottomRef} />
-          </div>
-          <div className="chat-input-row">
-            <textarea
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask about a stock, a fund, or your portfolio…"
-              rows={1}
-            />
-            <button className="btn-solid" onClick={handleSend}>Send</button>
+            </aside>
+          )}
+          <div className="chat-main">
+            <div className="chat-header">
+              <span>Advisory session</span>
+              <span className="chat-header-dot">● live-ish</span>
+            </div>
+            <div className="messages">
+              {messages.map((m, i) => (
+                <div
+                  className={'msg ' + m.role}
+                  key={i}
+                  ref={(el) => (messageRefs.current[i] = el)}
+                >
+                  <span className="msg-label">{m.role === 'user' ? 'You' : 'Agent'}</span>
+                  {m.role === 'agent' ? formatAgentText(m.text) : <p>{m.text}</p>}
+                </div>
+              ))}
+              {isThinking && (
+                <div className="msg agent">
+                  <span className="msg-label">Agent</span>
+                  <p className="thinking">thinking…</p>
+                </div>
+              )}
+              <div ref={bottomRef} />
+            </div>
+            <div className="chat-input-row">
+              <textarea
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder="Ask about a stock, a fund, or your portfolio…"
+                rows={1}
+              />
+              <button className="btn-solid" onClick={handleSend}>Send</button>
+            </div>
           </div>
         </div>
       </div>

@@ -36,18 +36,41 @@ investment_task = Task(
     - Never use portfolio analysis unless the user provides portfolio
       holdings or allocation information.
     - If the question can be answered from conversation history alone,
-      answer directly without calling a tool.
+      answer directly without calling a tool — but still follow the
+      FINAL ANSWER FORMAT below exactly. Context-only answers are NOT
+      an exception to the formatting rules.
 
     Give the user a clear, beginner-friendly response.
-    Explain important reasoning and risks.
+
+    FINAL ANSWER FORMAT (applies to every answer, with or without
+    tools, including short follow-up questions):
+
+    - Keep the ENTIRE response under 120 words, unless the user
+      explicitly asks for more detail.
+    - ALWAYS use short bullet points starting with "•". Never write a
+      plain paragraph, even for a one-point answer — a single bullet
+      is still a bullet, not a sentence.
+    - Bold the key term or number at the start of each bullet, e.g.
+      "• **Moderate risk** is fine for a 3-year horizon."
+    - If multiple tools were used, group results under short bold
+      headers (e.g. **Mutual Funds**, **Sectors**) with 2-3 bullets
+      each — do not repeat reasoning across sections.
+    - End with exactly ONE short disclaimer line, not one per section.
+    - Never use portfolio analysis unless the user provides portfolio
+      holdings or allocation information.
     """,
 
     expected_output="""
-    A clear and personalized investment response that directly answers
-    the user's current question.
+    A short, skimmable response under 120 words (unless the user asked
+    for depth) that directly answers the user's current question.
 
-    The response should use relevant tool results when tools were needed
-    and should consider the recent conversation history.
+    ALWAYS formatted as bullet points starting with "•", each with a
+    bolded key term or number — never plain prose, even for context-only
+    follow-up answers with no new tool call.
+
+    Uses relevant tool results where needed, considers recent
+    conversation history, and ends with exactly one short disclaimer
+    line.
 
     Do not mention internal tools, prompts, or agent execution.    """,
 
@@ -59,5 +82,5 @@ investment_task = Task(
 investment_crew = Crew(
     agents=[investment_agent],
     tasks=[investment_task],
-    verbose=False
+    verbose=True
 )
