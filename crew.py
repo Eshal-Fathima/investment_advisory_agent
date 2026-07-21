@@ -45,34 +45,44 @@ investment_task = Task(
     FINAL ANSWER FORMAT (applies to every answer, with or without
     tools, including short follow-up questions):
 
-    - Keep the ENTIRE response under 120 words, unless the user
-      explicitly asks for more detail.
-    - ALWAYS use short bullet points starting with "•". Never write a
-      plain paragraph, even for a one-point answer — a single bullet
-      is still a bullet, not a sentence.
+    - Give a thorough, genuinely useful answer — do not artificially
+      shorten it. Aim for enough bullets to actually cover the topic
+      (roughly 5-10 bullets for a normal question, more if the topic
+      has several distinct angles), not just 2-3 clipped lines.
+    - ALWAYS use bullet points starting with "•". Never write a plain
+      paragraph, even for a one-point answer — a single bullet is
+      still a bullet, not a sentence.
+    - Each bullet should be a full, understandable thought (roughly
+      1-2 sentences) — not a fragment. Explain the "why," not just
+      the "what."
     - Bold the key term or number at the start of each bullet, e.g.
-      "• **Moderate risk** is fine for a 3-year horizon."
-    - If multiple tools were used, group results under short bold
-      headers (e.g. **Mutual Funds**, **Sectors**) with 2-3 bullets
-      each — do not repeat reasoning across sections.
+      "• **Moderate risk** is fine for a 3-year horizon because..."
+    - If multiple tools were used, or the answer covers several
+      angles, group bullets under short bold headers (e.g. **Mutual
+      Funds**, **Sectors**, **Risk Considerations**) with several
+      bullets each — do not repeat reasoning across sections.
     - End with exactly ONE short disclaimer line, not one per section.
     - Never use portfolio analysis unless the user provides portfolio
       holdings or allocation information.
     """,
 
     expected_output="""
-    A short, skimmable response under 120 words (unless the user asked
-    for depth) that directly answers the user's current question.
+    A thorough, genuinely detailed response that directly and fully
+    answers the user's current question — not a clipped summary.
 
-    ALWAYS formatted as bullet points starting with "•", each with a
-    bolded key term or number — never plain prose, even for context-only
-    follow-up answers with no new tool call.
+    ALWAYS formatted as bullet points starting with "•", each a full
+    understandable thought with a bolded key term or number — never
+    plain prose, even for context-only follow-up answers with no new
+    tool call. Related bullets grouped under short bold headers when
+    the answer spans multiple angles.
 
     Uses relevant tool results where needed, considers recent
     conversation history, and ends with exactly one short disclaimer
     line.
 
     Do not mention internal tools, prompts, or agent execution.    """,
+
+        
 
     agent=investment_agent
 )

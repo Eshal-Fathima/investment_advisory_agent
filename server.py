@@ -7,7 +7,9 @@ from flask_cors import CORS
 from crew import investment_crew
 from mongodb import (
     get_conversation_history_text,
-    get_recent_conversations,
+    get_recent_chats,
+    get_chat,
+    create_chat,
     save_conversation,
 )
 
@@ -17,11 +19,6 @@ HISTORY_LIMIT = 10
 
 app = Flask(__name__)
 
-# Which frontends are allowed to call this API. Set ALLOWED_ORIGINS in .env as a
-# comma-separated list (e.g. "http://localhost:5173,https://myapp.com") once you
-# know which frontend(s) will be calling in. Defaults to "*" (any origin) so the
-# backend works out of the box for any frontend, including none at all — this
-# service doesn't assume or depend on any particular UI.
 allowed_origins = os.getenv("ALLOWED_ORIGINS", "*")
 origins = [o.strip() for o in allowed_origins.split(",")] if allowed_origins != "*" else "*"
 CORS(app, resources={r"/*": {"origins": origins}})
@@ -29,7 +26,6 @@ CORS(app, resources={r"/*": {"origins": origins}})
 
 @app.route("/health", methods=["GET"])
 def health():
-    """Simple liveness check any frontend (or none) can hit to confirm the API is up."""
     return jsonify({"status": "ok"})
 
 
@@ -38,6 +34,7 @@ def ask():
     data = request.get_json(silent=True) or {}
     question = data.get("question", "").strip()
     user_id = data.get("user_id", "").strip()
+    chat_id = data.get("chat_id")  # optional — None/absent means "start a new chat"
 
     if not question:
         return jsonify({"error": "question is required"}), 400
@@ -45,7 +42,10 @@ def ask():
     if not user_id:
         return jsonify({"error": "user_id is required"}), 400
 
-    chat_history = get_conversation_history_text(user_id, limit=HISTORY_LIMIT)
+    if not chat_id:
+        chat_id = create_chat(user_id=user_id, title=question[:50])
+
+    chat_history = get_conversation_history_text(chat_id, limit=HISTORY_LIMIT)
 
     result = investment_crew.kickoff(
         inputs={
@@ -56,18 +56,25 @@ def ask():
 
     answer = str(result)
 
-    save_conversation(question, answer, user_id=user_id)
+    save_conversation(chat_id, question, answer, user_id=user_id)
 
-    return jsonify({"answer": answer})
+    return jsonify({"answer": answer, "chat_id": chat_id})
 
 
-@app.route("/history/<user_id>", methods=["GET"])
-def history(user_id):
-    """Returns a user's last conversations. Any caller can use this to restore
-    chat context on load — it has no dependency on a specific frontend."""
-    conversations = get_recent_conversations(limit=HISTORY_LIMIT, user_id=user_id)
-    conversations.reverse()  # oldest first, so a UI can render top-to-bottom
-    return jsonify({"conversations": conversations})
+@app.route("/chats/<user_id>", methods=["GET"])
+def list_chats(user_id):
+    """List a user's chat threads for the sidebar (titles/timestamps only)."""
+    chats = get_recent_chats(limit=HISTORY_LIMIT, user_id=user_id)
+    return jsonify({"chats": chats})
+
+
+@app.route("/chats/<user_id>/<chat_id>", methods=["GET"])
+def get_chat_messages(user_id, chat_id):
+    """Fetch a single chat thread's full message history when the user opens it."""
+    chat = get_chat(chat_id)
+    if not chat or chat.get("user_id") != user_id:
+        return jsonify({"error": "chat not found"}), 404
+    return jsonify(chat)
 
 
 if __name__ == "__main__":
