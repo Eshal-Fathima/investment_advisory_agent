@@ -159,13 +159,16 @@ function getUserId() {
 // ---- chat panel ----
 
 const GREETING = { role: 'agent', text: "I'm your investment advisor agent. Ask me about a stock, a fund, or hand me your portfolio to review." }
+const CURRENT_CHAT_KEY = 'investment_agent_current_chat_id'
 
 function ChatPanel() {
   const [messages, setMessages] = useState([GREETING])
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [chats, setChats] = useState([])
-  const [currentChatId, setCurrentChatId] = useState(null)
+  // Seed from sessionStorage so a page refresh / hot-reload doesn't lose track
+  // of the in-progress chat and start creating a new one on every message.
+  const [currentChatId, setCurrentChatId] = useState(() => sessionStorage.getItem(CURRENT_CHAT_KEY) || null)
   const bottomRef = useRef(null)
   const userIdRef = useRef(getUserId())
 
@@ -177,6 +180,22 @@ function ChatPanel() {
   useEffect(() => {
     loadChats()
   }, [])
+
+  // If we came back with a chat id already in sessionStorage (e.g. after a
+  // refresh), reload that thread's messages instead of starting blank.
+  useEffect(() => {
+    if (currentChatId) openChat(currentChatId, { force: true })
+  }, [])
+
+  // Keep sessionStorage in sync so a refresh/hot-reload continues the same
+  // chat instead of silently starting a new one on the next message sent.
+  useEffect(() => {
+    if (currentChatId) {
+      sessionStorage.setItem(CURRENT_CHAT_KEY, currentChatId)
+    } else {
+      sessionStorage.removeItem(CURRENT_CHAT_KEY)
+    }
+  }, [currentChatId])
 
   async function loadChats() {
     try {
@@ -194,8 +213,8 @@ function ChatPanel() {
     setMessages([GREETING])
   }
 
-  async function openChat(chatId) {
-    if (chatId === currentChatId) return
+  async function openChat(chatId, { force = false } = {}) {
+    if (chatId === currentChatId && !force) return
     try {
       const response = await fetch(`http://localhost:5000/chats/${userIdRef.current}/${chatId}`)
       if (!response.ok) return
