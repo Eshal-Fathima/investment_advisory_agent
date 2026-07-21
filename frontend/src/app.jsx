@@ -158,62 +158,60 @@ function getUserId() {
 
 // ---- chat panel ----
 
+const GREETING = { role: 'agent', text: "I'm your investment advisor agent. Ask me about a stock, a fund, or hand me your portfolio to review." }
+
 function ChatPanel() {
-  const [messages, setMessages] = useState([
-    { role: 'agent', text: "I'm your investment advisor agent. Ask me about a stock, a fund, or hand me your portfolio to review." },
-  ])
+  const [messages, setMessages] = useState([GREETING])
   const [input, setInput] = useState('')
   const [isThinking, setIsThinking] = useState(false)
-  const [history, setHistory] = useState([])
-  const [activeLogIndex, setActiveLogIndex] = useState(null)
+  const [chats, setChats] = useState([])
+  const [currentChatId, setCurrentChatId] = useState(null)
   const bottomRef = useRef(null)
-  const messageRefs = useRef({})
   const userIdRef = useRef(getUserId())
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isThinking])
 
-  // Load this user's last conversations (up to 10) when the page opens
+  // Load this user's chat threads for the sidebar when the page opens
   useEffect(() => {
-    async function loadHistory() {
-      try {
-        const response = await fetch(`http://localhost:5000/history/${userIdRef.current}`)
-        if (!response.ok) return
-
-        const data = await response.json()
-        const conversations = data.conversations || []
-        if (conversations.length === 0) return
-
-        // messages[0] is the greeting, so past pairs start at index 1
-        const log = conversations.map((c, i) => ({
-          question: c.question,
-          created_at: c.created_at,
-          questionIndex: 1 + i * 2,
-        }))
-
-        const past = conversations.flatMap((c) => [
-          { role: 'user', text: c.question },
-          { role: 'agent', text: c.answer },
-        ])
-
-        setMessages((prev) => [...prev, ...past])
-        setHistory(log)
-      } catch (err) {
-        // silently ignore — history is a nice-to-have, not required to chat
-      }
-    }
-
-    loadHistory()
+    loadChats()
   }, [])
 
-  function jumpToLog(i) {
-    setActiveLogIndex(i)
-    const targetIndex = history[i].questionIndex
-    messageRefs.current[targetIndex]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  async function loadChats() {
+    try {
+      const response = await fetch(`http://localhost:5000/chats/${userIdRef.current}`)
+      if (!response.ok) return
+      const data = await response.json()
+      setChats(data.chats || [])
+    } catch (err) {
+      // silently ignore — sidebar history is a nice-to-have, not required to chat
+    }
   }
 
-  function formatLogDate(iso) {
+  function startNewChat() {
+    setCurrentChatId(null)
+    setMessages([GREETING])
+  }
+
+  async function openChat(chatId) {
+    if (chatId === currentChatId) return
+    try {
+      const response = await fetch(`http://localhost:5000/chats/${userIdRef.current}/${chatId}`)
+      if (!response.ok) return
+      const chat = await response.json()
+      const loaded = (chat.messages || []).map((m) => ({
+        role: m.role === 'user' ? 'user' : 'agent',
+        text: m.content,
+      }))
+      setMessages([GREETING, ...loaded])
+      setCurrentChatId(chatId)
+    } catch (err) {
+      // leave the current view untouched if the fetch fails
+    }
+  }
+
+  function formatChatDate(iso) {
     if (!iso) return ''
     const d = new Date(iso)
     return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
@@ -231,13 +229,21 @@ function ChatPanel() {
       const response = await fetch('http://localhost:5000/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question, user_id: userIdRef.current }),
+        body: JSON.stringify({
+          question,
+          user_id: userIdRef.current,
+          chat_id: currentChatId || undefined,
+        }),
       })
 
       if (!response.ok) throw new Error('Request failed')
 
       const data = await response.json()
       setMessages((prev) => [...prev, { role: 'agent', text: data.answer }])
+      if (data.chat_id && data.chat_id !== currentChatId) {
+        setCurrentChatId(data.chat_id)
+      }
+      loadChats() // refresh sidebar so the new/updated thread shows up, newest first
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -259,23 +265,24 @@ function ChatPanel() {
     <section id="chat">
       <div className="wrap">
         <div className="chat-shell">
-          {history.length > 0 && (
-            <aside className="chat-sidebar">
-              <div className="chat-sidebar-header">Session log</div>
-              <div className="chat-sidebar-list">
-                {history.map((h, i) => (
-                  <button
-                    key={i}
-                    className={'chat-sidebar-item' + (activeLogIndex === i ? ' active' : '')}
-                    onClick={() => jumpToLog(i)}
-                  >
-                    <span className="chat-sidebar-item-date">{formatLogDate(h.created_at)}</span>
-                    <span className="chat-sidebar-item-text">{h.question}</span>
-                  </button>
-                ))}
-              </div>
-            </aside>
-          )}
+          <aside className="chat-sidebar">
+            <div className="chat-sidebar-header">Chats</div>
+            <div className="chat-sidebar-new">
+              <button className="new-chat-btn" onClick={startNewChat}>+ New chat</button>
+            </div>
+            <div className="chat-sidebar-list">
+              {chats.map((c) => (
+                <button
+                  key={c._id}
+                  className={'chat-sidebar-item' + (currentChatId === c._id ? ' active' : '')}
+                  onClick={() => openChat(c._id)}
+                >
+                  <span className="chat-sidebar-item-date">{formatChatDate(c.updated_at)}</span>
+                  <span className="chat-sidebar-item-text">{c.title}</span>
+                </button>
+              ))}
+            </div>
+          </aside>
           <div className="chat-main">
             <div className="chat-header">
               <span>Advisory session</span>
@@ -286,7 +293,6 @@ function ChatPanel() {
                 <div
                   className={'msg ' + m.role}
                   key={i}
-                  ref={(el) => (messageRefs.current[i] = el)}
                 >
                   <span className="msg-label">{m.role === 'user' ? 'You' : 'Agent'}</span>
                   {m.role === 'agent' ? formatAgentText(m.text) : <p>{m.text}</p>}
