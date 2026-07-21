@@ -2,8 +2,9 @@ import os
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
-from pymongo import MongoClient, DESCENDING
+from pymongo import MongoClient, DESCENDING, ReturnDocument
 from pymongo.errors import PyMongoError
+from bson import ObjectId
 
 load_dotenv()
 
@@ -18,81 +19,128 @@ def connect_db():
         return _collection
 
     _client = MongoClient(os.getenv("MONGODB_URI"))
-
     database = _client[os.getenv("DATABASE_NAME")]
-
     _collection = database[os.getenv("COLLECTION_NAME")]
 
     return _collection
 
 
-def save_conversation(question: str, answer: str, user_id: str = None) -> str:
+def create_chat(user_id: str, title: str = "New Chat") -> str:
+    """Create a new empty chat thread and return its id."""
     collection = connect_db()
 
     document = {
-        "question": question,
-        "answer": str(answer),
         "user_id": user_id,
+        "title": title,
+        "messages": [],
         "created_at": datetime.now(timezone.utc),
+        "updated_at": datetime.now(timezone.utc),
     }
 
     try:
         result = collection.insert_one(document)
         return str(result.inserted_id)
     except PyMongoError as e:
+        print(f"[mongodb] Failed to create chat: {e}")
+        return None
+
+
+def save_conversation(chat_id: str, question: str, answer: str, user_id: str = None) -> bool:
+    """
+    Append a question/answer pair to an existing chat thread.
+    If chat_id is None, a new chat is created first.
+    """
+    collection = connect_db()
+    now = datetime.now(timezone.utc)
+
+    new_messages = [
+        {"role": "user", "content": question, "timestamp": now},
+        {"role": "assistant", "content": str(answer), "timestamp": now},
+    ]
+
+    try:
+        if not chat_id:
+            chat_id = create_chat(user_id=user_id, title=question[:50])
+
+        collection.update_one(
+            {"_id": ObjectId(chat_id)},
+            {
+                "$push": {"messages": {"$each": new_messages}},
+                "$set": {"updated_at": now},
+            },
+        )
+        return chat_id
+    except PyMongoError as e:
         print(f"[mongodb] Failed to save conversation: {e}")
         return None
 
 
-def get_recent_conversations(limit: int = 20, user_id: str = None) -> list:
+def get_chat(chat_id: str) -> dict:
+    """Fetch a single chat thread with all its messages."""
+    collection = connect_db()
+
+    try:
+        doc = collection.find_one({"_id": ObjectId(chat_id)})
+        if doc:
+            doc["_id"] = str(doc["_id"])
+        return doc
+    except PyMongoError as e:
+        print(f"[mongodb] Failed to fetch chat: {e}")
+        return None
+
+
+def get_recent_chats(limit: int = 20, user_id: str = None) -> list:
+    """List chat threads (for the sidebar) — no messages, just metadata."""
     collection = connect_db()
 
     query = {"user_id": user_id} if user_id else {}
 
     try:
-        cursor = collection.find(query).sort("created_at", DESCENDING).limit(limit)
-        conversations = []
+        cursor = (
+            collection.find(query, {"messages": 0})
+            .sort("updated_at", DESCENDING)
+            .limit(limit)
+        )
+        chats = []
         for doc in cursor:
             doc["_id"] = str(doc["_id"])
-            conversations.append(doc)
-        return conversations
+            chats.append(doc)
+        return chats
     except PyMongoError as e:
-        print(f"[mongodb] Failed to fetch conversations: {e}")
+        print(f"[mongodb] Failed to fetch chats: {e}")
         return []
 
 
-def delete_conversation(conversation_id: str) -> bool:
-    from bson import ObjectId
-
+def delete_conversation(chat_id: str) -> bool:
     collection = connect_db()
 
     try:
-        result = collection.delete_one({"_id": ObjectId(conversation_id)})
+        result = collection.delete_one({"_id": ObjectId(chat_id)})
         return result.deleted_count > 0
     except PyMongoError as e:
-        print(f"[mongodb] Failed to delete conversation: {e}")
+        print(f"[mongodb] Failed to delete chat: {e}")
         return False
 
 
-def get_conversation_history_text(user_id: str, limit: int = 10) -> str:
+def get_conversation_history_text(chat_id: str, limit: int = 10) -> str:
     """
-    Fetch the last `limit` exchanges for a given user and format them as
-    plain text, oldest first, so they can be dropped straight into the
-    agent's prompt as short-term memory.
+    Fetch the last `limit` exchanges from a single chat thread and format
+    them as plain text, oldest first, for the agent's short-term memory.
     """
-    if not user_id:
+    if not chat_id:
         return "No previous conversation history."
 
-    conversations = get_recent_conversations(limit=limit, user_id=user_id)
-
-    if not conversations:
+    chat = get_chat(chat_id)
+    if not chat or not chat.get("messages"):
         return "No previous conversation history."
 
-    # get_recent_conversations returns newest-first; flip to chronological order
-    conversations.reverse()
+    messages = chat["messages"][-(limit * 2):]  # limit is in Q&A pairs
 
     lines = []
-    for conv in conversations:
-        lines.append(f"User: {conv['question']}\nAdvisor: {conv['answer']}")
+    for i in range(0, len(messages) - 1, 2):
+        user_msg = messages[i]
+        assistant_msg = messages[i + 1] if i + 1 < len(messages) else None
+        if assistant_msg:
+            lines.append(f"User: {user_msg['content']}\nAdvisor: {assistant_msg['content']}")
 
     return "\n\n".join(lines)

@@ -1,17 +1,13 @@
 import os
 
 from crew import investment_crew
-from mongodb import get_conversation_history_text, save_conversation
+from mongodb import get_conversation_history_text, save_conversation, create_chat
 
 HISTORY_LIMIT = 10
 USER_ID_FILE = ".current_user_id"
 
 
 def get_user_id() -> str:
-    """
-    Ask which user is talking (so each person gets their own remembered
-    history), remembering the last one used on this machine as a default.
-    """
     last_used = None
     if os.path.exists(USER_ID_FILE):
         with open(USER_ID_FILE, "r") as f:
@@ -35,6 +31,8 @@ def main():
     user_id = get_user_id()
     print(f"\nHi {user_id}! I'm your investment advisor. Type 'exit' to quit.")
 
+    chat_id = create_chat(user_id=user_id, title="New Chat")  # one thread for this session
+
     while True:
         question = input("\nYou: ").strip()
 
@@ -44,7 +42,7 @@ def main():
         if not question:
             continue
 
-        chat_history = get_conversation_history_text(user_id, limit=HISTORY_LIMIT)
+        chat_history = get_conversation_history_text(chat_id, limit=HISTORY_LIMIT)
 
         result = investment_crew.kickoff(
             inputs={
@@ -56,7 +54,7 @@ def main():
         answer = str(result)
         print("\n" + answer)
 
-        save_conversation(question, answer, user_id=user_id)
+        save_conversation(chat_id, question, answer, user_id=user_id)
 
 
 if __name__ == "__main__":

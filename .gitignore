@@ -65,7 +65,7 @@ credentials.json
 secrets.json
 *.pem
 *.key
-
+.current_user_id
 # OS
 Thumbs.db
 .DS_Store
